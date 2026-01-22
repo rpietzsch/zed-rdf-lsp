@@ -1,0 +1,14 @@
+name = "Turtle"
+grammar = "turtle"
+path_suffixes = ["ttl"]
+line_comments = ["# "]
+
+brackets = [
+  { start = "[", end = "]", close = true, newline = true },
+  { start = "(", end = ")", close = true, newline = false },
+  { start = "<", end = ">", close = true, newline = false },
+  { start = "\"", end = "\"", close = true, newline = false, not_in = ["string", "comment"] },
+  { start = "'", end = "'", close = true, newline = false, not_in = ["string", "comment"] },
+  { start = "\"\"\"", end = "\"\"\"", close = true, newline = true, not_in = ["string", "comment"] },
+  { start = "'''", end = "'''", close = true, newline = true, not_in = ["string", "comment"] },
+]
