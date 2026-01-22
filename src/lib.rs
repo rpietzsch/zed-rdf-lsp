@@ -13,37 +13,34 @@ const SPARQL_SERVER_ID: &str = "sparql-language-server";
 const TURTLE_SERVER_ID: &str = "turtle-language-server";
 const TRIG_SERVER_ID: &str = "trig-language-server";
 
-/// Server configuration
-struct ServerConfig {
-    package_name: &'static str,
-    server_path: &'static str,
-}
-
-const SPARQL_CONFIG: ServerConfig = ServerConfig {
-    package_name: "sparql-language-server",
-    server_path: "node_modules/sparql-language-server/dist/cli.js",
-};
-
-const TURTLE_CONFIG: ServerConfig = ServerConfig {
-    package_name: "turtle-language-server",
-    server_path: "node_modules/turtle-language-server/dist/cli.js",
-};
-
-const TRIG_CONFIG: ServerConfig = ServerConfig {
-    package_name: "trig-language-server",
-    server_path: "node_modules/trig-language-server/dist/cli.js",
-};
+/// NPM package names for the language servers
+const SPARQL_PACKAGE: &str = "sparql-language-server";
+const TURTLE_PACKAGE: &str = "turtle-language-server";
+const TRIG_PACKAGE: &str = "trig-language-server";
 
 fn language_server_binary_path(
-    config: &ServerConfig,
+    package_name: &str,
     language_server_id: &zed::LanguageServerId,
     did_find_server: &mut bool,
 ) -> Result<String> {
+    // Get the extension's working directory (where npm packages are installed)
+    // This is called during extension initialization, so current_dir is the extension dir
+    let extension_dir = std::env::current_dir()
+        .map_err(|e| format!("Failed to get current directory: {}", e))?;
+
+    // Build absolute path to the server CLI
+    let server_path = extension_dir
+        .join("node_modules")
+        .join(package_name)
+        .join("dist")
+        .join("cli.js");
+
+    let server_path_str = server_path.to_string_lossy().to_string();
+
     // Check if the server binary already exists
-    let server_path = config.server_path;
-    if fs::metadata(server_path).map_or(false, |stat| stat.is_file()) {
+    if fs::metadata(&server_path).map_or(false, |stat| stat.is_file()) {
         *did_find_server = true;
-        return Ok(server_path.to_string());
+        return Ok(server_path_str);
     }
 
     // Install or update the npm package
@@ -52,22 +49,22 @@ fn language_server_binary_path(
         &zed::LanguageServerInstallationStatus::CheckingForUpdate,
     );
 
-    let version = zed::npm_package_latest_version(config.package_name)?;
+    let version = zed::npm_package_latest_version(package_name)?;
 
     if !*did_find_server
-        || zed::npm_package_installed_version(config.package_name)?.as_ref() != Some(&version)
+        || zed::npm_package_installed_version(package_name)?.as_ref() != Some(&version)
     {
         zed::set_language_server_installation_status(
             language_server_id,
             &zed::LanguageServerInstallationStatus::Downloading,
         );
 
-        zed::npm_install_package(config.package_name, &version)?;
+        zed::npm_install_package(package_name, &version)?;
 
         *did_find_server = true;
     }
 
-    Ok(server_path.to_string())
+    Ok(server_path_str)
 }
 
 impl zed::Extension for RdfExtension {
@@ -86,17 +83,17 @@ impl zed::Extension for RdfExtension {
     ) -> Result<zed::Command> {
         let server_path = match language_server_id.as_ref() {
             SPARQL_SERVER_ID => language_server_binary_path(
-                &SPARQL_CONFIG,
+                SPARQL_PACKAGE,
                 language_server_id,
                 &mut self.did_find_sparql_server,
             )?,
             TURTLE_SERVER_ID => language_server_binary_path(
-                &TURTLE_CONFIG,
+                TURTLE_PACKAGE,
                 language_server_id,
                 &mut self.did_find_turtle_server,
             )?,
             TRIG_SERVER_ID => language_server_binary_path(
-                &TRIG_CONFIG,
+                TRIG_PACKAGE,
                 language_server_id,
                 &mut self.did_find_trig_server,
             )?,
