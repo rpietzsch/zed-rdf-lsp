@@ -1,0 +1,20 @@
+# Rust / Cargo
+/target/
+Cargo.lock
+
+# Zed extension artifacts
+/grammars/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Test files
+/tmp/

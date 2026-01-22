@@ -3,6 +3,32 @@
 ; Comments
 (comment) @comment
 
+; Variables
+(var) @variable
+
+; IRIs and Prefixed Names
+(iri_reference) @string.special
+(prefixed_name) @type
+(namespace) @type.builtin
+(pn_prefix) @type.builtin
+(pn_local) @property
+
+; Literals
+(string) @string
+(rdf_literal) @string
+(lang_tag) @attribute
+(boolean_literal) @constant.builtin
+(integer) @number
+(decimal) @number
+(double) @number
+
+; Escape sequences
+(echar) @string.escape
+
+; Blank nodes
+(blank_node_label) @variable.special
+(anon) @variable.special
+
 ; Keywords - Query Types
 [
   "SELECT"
@@ -27,6 +53,7 @@
   "VALUES"
   "GROUP"
   "HAVING"
+  "UNDEF"
 ] @keyword
 
 ; Keywords - Modifiers
@@ -55,7 +82,9 @@
 [
   "INSERT"
   "DELETE"
-  "DATA"
+  "INSERT DATA"
+  "DELETE DATA"
+  "DELETE WHERE"
   "LOAD"
   "CLEAR"
   "DROP"
@@ -71,31 +100,7 @@
   "ALL"
 ] @keyword
 
-; Variables
-(var) @variable
-
-; IRIs
-(iri_reference) @string.special
-(prefixed_name) @type
-
-; Namespace prefix declaration
-(prefix_declaration
-  (namespace) @type.builtin)
-
-; Literals
-(rdf_literal) @string
-(boolean_literal) @constant.builtin
-(integer) @number
-(decimal) @number
-(double) @number
-
-; String contents
-(string) @string
-
-; Language tags
-(lang_tag) @attribute
-
-; Aggregates and Built-in Functions
+; Aggregate Functions
 [
   "COUNT"
   "SUM"
@@ -107,7 +112,7 @@
   "SEPARATOR"
 ] @function.builtin
 
-; Built-in functions
+; Built-in Functions
 [
   "STR"
   "LANG"
@@ -152,15 +157,15 @@
   "IF"
   "STRLANG"
   "STRDT"
+  "REGEX"
+  "SUBSTR"
+  "REPLACE"
   "sameTerm"
   "isIRI"
   "isURI"
   "isBLANK"
   "isLITERAL"
   "isNUMERIC"
-  "REGEX"
-  "SUBSTR"
-  "REPLACE"
 ] @function.builtin
 
 ; Operators
@@ -168,7 +173,6 @@
   "||"
   "&&"
   "="
-  "!="
   "<"
   ">"
   "<="
@@ -180,18 +184,27 @@
   "!"
   "^"
   "^^"
+  "|"
 ] @operator
 
-; Special operator 'a' (rdf:type shorthand)
-"a" @keyword.operator
+; Boolean literals
+[
+  "true"
+  "false"
+] @constant.builtin
 
-; Punctuation
+; Special predicate 'a' (rdf:type shorthand)
+"a" @keyword
+
+; Punctuation - Delimiters
 [
   "."
   ","
   ";"
+  ":"
 ] @punctuation.delimiter
 
+; Punctuation - Brackets
 [
   "("
   ")"
@@ -200,8 +213,3 @@
   "{"
   "}"
 ] @punctuation.bracket
-
-[
-  "<"
-  ">"
-] @punctuation.special
