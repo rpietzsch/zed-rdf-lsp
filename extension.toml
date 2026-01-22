@@ -1,0 +1,27 @@
+id = "rdf"
+name = "RDF"
+version = "0.1.0"
+schema_version = 1
+authors = ["Rene Pietzsch <rpietzsch@github.com>"]
+description = "Language support for RDF: SPARQL, Turtle, and TriG with syntax highlighting and LSP"
+repository = "https://github.com/rpietzsch/zed-rdf-lsp"
+
+[grammars.sparql]
+repository = "https://github.com/GordianDziwis/tree-sitter-sparql"
+rev = "d853661ca680d8ff7f8d800182d5782b61d0dd58"
+
+[grammars.turtle]
+repository = "https://github.com/GordianDziwis/tree-sitter-turtle"
+rev = "7f789ea7ef765080f71a298fc96b7c957fa24422"
+
+[language_servers.sparql-language-server]
+name = "SPARQL Language Server"
+languages = ["SPARQL"]
+
+[language_servers.turtle-language-server]
+name = "Turtle Language Server"
+languages = ["Turtle"]
+
+[language_servers.trig-language-server]
+name = "TriG Language Server"
+languages = ["TriG"]
