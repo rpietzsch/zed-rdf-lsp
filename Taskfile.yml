@@ -5,6 +5,7 @@ version: '3'
 vars:
   EXTENSION_NAME: rdf
   EXTENSION_DIR: '{{.ROOT_DIR}}'
+  WASM_TARGET: wasm32-wasip1
 
 tasks:
   default:
@@ -13,15 +14,82 @@ tasks:
       - task --list
 
   # ============================================================================
+  # Setup
+  # ============================================================================
+
+  setup:
+    desc: Install all required dependencies
+    cmds:
+      - task: setup:rust
+      - task: setup:wasm-target
+
+  setup:rust:
+    desc: Check Rust installation (must be via rustup, not homebrew)
+    cmds:
+      - |
+        if ! command -v rustup &> /dev/null; then
+          echo "ERROR: rustup not found. Install Rust via rustup (not homebrew):"
+          echo "  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+          exit 1
+        fi
+        echo "✓ rustup found: $(rustup --version)"
+        echo "✓ rustc version: $(rustc --version)"
+
+  setup:wasm-target:
+    desc: Install WASM target for Zed extensions
+    cmds:
+      - |
+        echo "Installing {{.WASM_TARGET}} target..."
+        rustup target add {{.WASM_TARGET}}
+        echo "✓ WASM target installed"
+
+  # ============================================================================
+  # Build
+  # ============================================================================
+
+  build:
+    desc: Build the extension (compile Rust to WASM)
+    deps: [setup:wasm-target]
+    cmds:
+      - |
+        echo "Building extension..."
+        cargo build --release --target {{.WASM_TARGET}}
+        echo "✓ Build complete"
+        echo ""
+        echo "Output: target/{{.WASM_TARGET}}/release/zed_rdf.wasm"
+
+  build:debug:
+    desc: Build the extension in debug mode
+    deps: [setup:wasm-target]
+    cmds:
+      - cargo build --target {{.WASM_TARGET}}
+
+  build:check:
+    desc: Check if the code compiles without building
+    cmds:
+      - cargo check --target {{.WASM_TARGET}}
+
+  build:clean:
+    desc: Clean build artifacts
+    cmds:
+      - cargo clean
+
+  # ============================================================================
   # Development
   # ============================================================================
 
   dev:install:
-    desc: Install extension in Zed for development (opens Zed)
+    desc: Build and install extension in Zed for development
+    deps: [build]
     cmds:
       - |
-        echo "Opening Zed to install dev extension..."
-        echo "In Zed: Cmd+Shift+P -> 'zed: install dev extension' -> select this directory"
+        echo "Extension built successfully!"
+        echo ""
+        echo "To install in Zed:"
+        echo "  1. Open Zed"
+        echo "  2. Run: Cmd+Shift+P -> 'zed: install dev extension'"
+        echo "  3. Select this directory: {{.EXTENSION_DIR}}"
+        echo ""
         open -a Zed "{{.EXTENSION_DIR}}"
 
   dev:logs:
@@ -35,6 +103,13 @@ tasks:
       - |
         echo "In Zed: Cmd+Shift+P -> 'zed: open log'"
         open -a Zed
+
+  dev:watch:
+    desc: Watch for changes and rebuild
+    cmds:
+      - |
+        echo "Watching for changes... (Ctrl+C to stop)"
+        cargo watch -x "build --target {{.WASM_TARGET}}"
 
   # ============================================================================
   # Testing
@@ -111,17 +186,30 @@ tasks:
 
   publish:check:
     desc: Validate extension before publishing
+    deps: [build]
     cmds:
       - |
         echo "Checking extension structure..."
 
         # Check required files
-        for file in extension.toml LICENSE README.md; do
+        for file in extension.toml LICENSE README.md Cargo.toml; do
           if [ ! -f "{{.EXTENSION_DIR}}/$file" ]; then
             echo "ERROR: Missing required file: $file"
             exit 1
           fi
         done
+
+        # Check Rust source
+        if [ ! -f "{{.EXTENSION_DIR}}/src/lib.rs" ]; then
+          echo "ERROR: Missing src/lib.rs"
+          exit 1
+        fi
+
+        # Check WASM output
+        if [ ! -f "{{.EXTENSION_DIR}}/target/{{.WASM_TARGET}}/release/zed_rdf.wasm" ]; then
+          echo "ERROR: WASM not built. Run 'task build' first."
+          exit 1
+        fi
 
         # Check language directories
         for lang in sparql turtle trig; do
@@ -140,6 +228,7 @@ tasks:
         done
 
         echo "✓ All required files present"
+        echo "✓ WASM built successfully"
 
         # Show extension info
         echo ""
@@ -154,6 +243,7 @@ tasks:
         IFS='.' read -r major minor patch <<< "$current"
         new="$major.$minor.$((patch + 1))"
         sed -i '' "s/version = \"$current\"/version = \"$new\"/" extension.toml
+        sed -i '' "s/version = \"$current\"/version = \"$new\"/" Cargo.toml
         echo "Version bumped: $current -> $new"
 
   publish:bump-minor:
@@ -164,6 +254,7 @@ tasks:
         IFS='.' read -r major minor patch <<< "$current"
         new="$major.$((minor + 1)).0"
         sed -i '' "s/version = \"$current\"/version = \"$new\"/" extension.toml
+        sed -i '' "s/version = \"$current\"/version = \"$new\"/" Cargo.toml
         echo "Version bumped: $current -> $new"
 
   publish:instructions:
@@ -174,31 +265,35 @@ tasks:
         echo "Publishing to Zed Extensions Registry"
         echo "=========================================="
         echo ""
-        echo "1. Push your extension to GitHub:"
+        echo "1. Build and validate:"
+        echo "   task build"
+        echo "   task publish:check"
+        echo ""
+        echo "2. Push your extension to GitHub:"
         echo "   git add ."
         echo "   git commit -m 'Initial release'"
         echo "   git push origin main"
         echo ""
-        echo "2. Fork the Zed extensions repository:"
+        echo "3. Fork the Zed extensions repository:"
         echo "   https://github.com/zed-industries/extensions"
         echo ""
-        echo "3. Clone your fork:"
+        echo "4. Clone your fork:"
         echo "   git clone https://github.com/YOUR_USERNAME/extensions"
         echo "   cd extensions"
         echo ""
-        echo "4. Add your extension as a submodule:"
+        echo "5. Add your extension as a submodule:"
         echo "   git submodule add https://github.com/rpietzsch/zed-rdf-lsp extensions/rdf"
         echo ""
-        echo "5. Add entry to extensions.toml:"
+        echo "6. Add entry to extensions.toml:"
         echo '   [rdf]'
         echo '   submodule = "extensions/rdf"'
         echo '   version = "0.1.0"'
         echo ""
-        echo "6. Sort and format:"
+        echo "7. Sort and format:"
         echo "   pnpm install"
         echo "   pnpm sort-extensions"
         echo ""
-        echo "7. Commit and create PR:"
+        echo "8. Commit and create PR:"
         echo "   git add ."
         echo "   git commit -m 'Add RDF extension'"
         echo "   git push origin main"
@@ -210,8 +305,9 @@ tasks:
   # ============================================================================
 
   clean:
-    desc: Clean temporary test files
+    desc: Clean all build artifacts and temporary files
     cmds:
+      - cargo clean
       - rm -f /tmp/test.rq /tmp/test.ttl /tmp/test.trig
 
   info:
@@ -220,5 +316,10 @@ tasks:
       - |
         echo "Extension: {{.EXTENSION_NAME}}"
         echo "Directory: {{.EXTENSION_DIR}}"
+        echo "WASM Target: {{.WASM_TARGET}}"
         echo ""
+        echo "=== extension.toml ==="
         cat {{.EXTENSION_DIR}}/extension.toml
+        echo ""
+        echo "=== Cargo.toml ==="
+        cat {{.EXTENSION_DIR}}/Cargo.toml

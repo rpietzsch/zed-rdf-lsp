@@ -1,6 +1,7 @@
 # RDF Language Support for Zed
 
-A Zed extension providing syntax highlighting for RDF (Resource Description Framework) languages.
+A Zed extension providing syntax highlighting and language server support for
+RDF (Resource Description Framework) languages.
 
 ## Supported Languages
 
@@ -12,7 +13,11 @@ A Zed extension providing syntax highlighting for RDF (Resource Description Fram
 
 ## Features
 
-- Syntax highlighting for all supported languages
+- **Syntax highlighting** for all supported languages
+- **Language Server Protocol (LSP)** support via Stardog language servers:
+  - Autocompletion for keywords and syntax
+  - Hover tooltips
+  - Diagnostics (error checking)
 - Bracket matching and auto-closing
 - Comment toggling (`#` for line comments)
 
@@ -28,46 +33,67 @@ A Zed extension providing syntax highlighting for RDF (Resource Description Fram
 ### Manual Installation (Development)
 
 1. Clone this repository
-2. Open Zed
-3. Run `Cmd+Shift+P` → `zed: install dev extension`
-4. Select the cloned directory
+2. Build the extension: `task build`
+3. Open Zed
+4. Run `Cmd+Shift+P` → `zed: install dev extension`
+5. Select the cloned directory
 
 ## Development
 
-This project uses [Task](https://taskfile.dev) for automation. Install it with:
+### Prerequisites
+
+- [Rust](https://rustup.rs/) (via rustup, not homebrew)
+- [Task](https://taskfile.dev) runner
 
 ```bash
+# Install Task
 brew install go-task
+
+# Setup Rust and WASM target
+task setup
 ```
 
 ### Available Tasks
 
 ```bash
 task                    # Show all available tasks
-task dev:install        # Install extension in Zed for development
+task setup              # Install dependencies (Rust, WASM target)
+task build              # Build extension (compile to WASM)
+task dev:install        # Build and install in Zed for testing
 task dev:logs           # Open Zed with verbose logging
-task test:all           # Create and open sample files for testing
+task test:all           # Create and open sample files
 task publish:check      # Validate extension before publishing
-task publish:instructions  # Show publishing instructions
 ```
 
-### Testing Locally
+### Build & Test Workflow
 
-1. Install the dev extension:
+1. Setup dependencies:
+
+   ```bash
+   task setup
+   ```
+
+2. Build the extension:
+
+   ```bash
+   task build
+   ```
+
+3. Install in Zed:
 
    ```bash
    task dev:install
    ```
 
-2. Create test files:
+4. Test with sample files:
 
    ```bash
-   task test:sparql   # Test SPARQL highlighting
-   task test:turtle   # Test Turtle highlighting
-   task test:trig     # Test TriG highlighting
+   task test:sparql   # Test SPARQL
+   task test:turtle   # Test Turtle
+   task test:trig     # Test TriG
    ```
 
-3. Debug with verbose logging:
+5. Debug with verbose logging:
 
    ```bash
    task dev:logs
@@ -76,21 +102,32 @@ task publish:instructions  # Show publishing instructions
 ## Publishing
 
 Zed extensions are published via the
-[zed-industries/extensions](https://github.com/zed-industries/extensions) repository.
+[zed-industries/extensions](https://github.com/zed-industries/extensions)
+repository.
 
 ### Quick Steps
 
-1. **Push your extension to GitHub**
-
-2. **Fork** [zed-industries/extensions](https://github.com/zed-industries/extensions)
-
-3. **Add as submodule** in your fork:
+1. **Build and validate:**
 
    ```bash
-   git submodule add https://github.com/YOUR_USERNAME/zed-rdf-lsp extensions/rdf
+   task build
+   task publish:check
    ```
 
-4. **Add entry to `extensions.toml`**:
+2. **Push your extension to GitHub**
+
+3. **Fork**
+   [zed-industries/extensions](https://github.com/zed-industries/extensions)
+
+4. **Add as submodule** in your fork:
+
+   ```bash
+   git submodule add \
+     https://github.com/YOUR_USERNAME/zed-rdf-lsp \
+     extensions/rdf
+   ```
+
+5. **Add entry to `extensions.toml`**:
 
    ```toml
    [rdf]
@@ -98,7 +135,7 @@ Zed extensions are published via the
    version = "0.1.0"
    ```
 
-5. **Format and submit PR**:
+6. **Format and submit PR**:
 
    ```bash
    pnpm install && pnpm sort-extensions
@@ -112,24 +149,37 @@ Run `task publish:instructions` for detailed steps.
 
 ```text
 zed-rdf-lsp/
-├── extension.toml           # Extension metadata + grammar sources
-├── LICENSE                   # MIT license
+├── extension.toml       # Extension metadata + grammars + LSP config
+├── Cargo.toml           # Rust dependencies
+├── src/
+│   └── lib.rs           # Extension implementation (LSP integration)
+├── languages/
+│   ├── sparql/
+│   │   ├── config.toml  # Language config
+│   │   ├── highlights.scm
+│   │   └── brackets.scm
+│   ├── turtle/
+│   │   └── ...
+│   └── trig/
+│       └── ...
+├── LICENSE
 ├── README.md
-├── Taskfile.yml             # Task automation
-└── languages/
-    ├── sparql/
-    │   ├── config.toml      # Language config
-    │   ├── highlights.scm   # Syntax highlighting
-    │   └── brackets.scm     # Bracket matching
-    ├── turtle/
-    │   └── ...
-    └── trig/
-        └── ...
+└── Taskfile.yml
 ```
 
-## Tree-sitter Grammars
+## Language Servers
 
-This extension uses the following tree-sitter grammars:
+This extension uses the [Stardog language servers](https://github.com/stardog-union/stardog-language-servers):
+
+| Language | npm Package |
+|----------|-------------|
+| SPARQL | [sparql-language-server](https://www.npmjs.com/package/sparql-language-server) |
+| Turtle | [turtle-language-server](https://www.npmjs.com/package/turtle-language-server) |
+| TriG | [trig-language-server](https://www.npmjs.com/package/trig-language-server) |
+
+The extension automatically downloads and manages these servers.
+
+## Tree-sitter Grammars
 
 - **SPARQL**: [GordianDziwis/tree-sitter-sparql](https://github.com/GordianDziwis/tree-sitter-sparql)
 - **Turtle/TriG**: [GordianDziwis/tree-sitter-turtle](https://github.com/GordianDziwis/tree-sitter-turtle)
@@ -144,5 +194,6 @@ Contributions are welcome! Please feel free to submit issues or pull requests.
 
 ## Acknowledgements
 
-- Inspired by [stardog-vsc](https://github.com/stardog-union/stardog-vsc) for VSCode
+- Inspired by [stardog-vsc](https://github.com/stardog-union/stardog-vsc)
+- Language servers by [Stardog Union](https://github.com/stardog-union)
 - Tree-sitter grammars by [Gordian Dziwis](https://github.com/GordianDziwis)
