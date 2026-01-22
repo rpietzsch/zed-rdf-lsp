@@ -1,10 +1,11 @@
+use std::fs;
 use zed_extension_api::{self as zed, serde_json, Result};
 
 /// RDF extension for Zed providing language server support for SPARQL, Turtle, and TriG.
 struct RdfExtension {
-    cached_sparql_server_path: Option<String>,
-    cached_turtle_server_path: Option<String>,
-    cached_trig_server_path: Option<String>,
+    did_find_sparql_server: bool,
+    did_find_turtle_server: bool,
+    did_find_trig_server: bool,
 }
 
 /// Language server IDs (must match extension.toml)
@@ -12,88 +13,69 @@ const SPARQL_SERVER_ID: &str = "sparql-language-server";
 const TURTLE_SERVER_ID: &str = "turtle-language-server";
 const TRIG_SERVER_ID: &str = "trig-language-server";
 
-/// NPM package names
-const SPARQL_NPM_PACKAGE: &str = "sparql-language-server";
-const TURTLE_NPM_PACKAGE: &str = "turtle-language-server";
-const TRIG_NPM_PACKAGE: &str = "trig-language-server";
+/// Server configuration
+struct ServerConfig {
+    package_name: &'static str,
+    server_path: &'static str,
+}
 
-impl RdfExtension {
-    /// Install or update an npm-based language server and return the path to its binary.
-    fn install_npm_language_server(
-        &self,
-        package_name: &str,
-        server_id: &zed::LanguageServerId,
-    ) -> Result<String> {
-        // Check if already installed
-        let installed_version = zed::npm_package_installed_version(package_name)?;
-        let latest_version = zed::npm_package_latest_version(package_name)?;
+const SPARQL_CONFIG: ServerConfig = ServerConfig {
+    package_name: "sparql-language-server",
+    server_path: "node_modules/sparql-language-server/dist/cli.js",
+};
 
-        // Install or update if needed
-        if installed_version.as_ref() != Some(&latest_version) {
-            zed::set_language_server_installation_status(
-                server_id,
-                &zed::LanguageServerInstallationStatus::Downloading,
-            );
+const TURTLE_CONFIG: ServerConfig = ServerConfig {
+    package_name: "turtle-language-server",
+    server_path: "node_modules/turtle-language-server/dist/cli.js",
+};
 
-            let result = zed::npm_install_package(package_name, &latest_version);
+const TRIG_CONFIG: ServerConfig = ServerConfig {
+    package_name: "trig-language-server",
+    server_path: "node_modules/trig-language-server/dist/cli.js",
+};
 
-            if result.is_err() {
-                zed::set_language_server_installation_status(
-                    server_id,
-                    &zed::LanguageServerInstallationStatus::Failed(format!(
-                        "Failed to install {} v{}",
-                        package_name, latest_version
-                    )),
-                );
-                return Err(format!(
-                    "Failed to install npm package: {} v{}",
-                    package_name, latest_version
-                ));
-            }
-        }
-
-        // Get the path to the installed package binary
-        zed::npm_package_installed_version(package_name)?
-            .ok_or_else(|| format!("Package {} not found after installation", package_name))?;
-
-        Ok(zed::node_binary_path()?)
+fn language_server_binary_path(
+    config: &ServerConfig,
+    language_server_id: &zed::LanguageServerId,
+    did_find_server: &mut bool,
+) -> Result<String> {
+    // Check if the server binary already exists
+    let server_path = config.server_path;
+    if fs::metadata(server_path).map_or(false, |stat| stat.is_file()) {
+        *did_find_server = true;
+        return Ok(server_path.to_string());
     }
 
-    /// Get the language server command for an npm-based server.
-    fn npm_server_command(
-        &mut self,
-        server_id: &zed::LanguageServerId,
-        package_name: &str,
-        cached_path: &mut Option<String>,
-    ) -> Result<zed::Command> {
-        let node_path = match cached_path {
-            Some(path) => path.clone(),
-            None => {
-                let path = self.install_npm_language_server(package_name, server_id)?;
-                *cached_path = Some(path.clone());
-                path
-            }
-        };
+    // Install or update the npm package
+    zed::set_language_server_installation_status(
+        language_server_id,
+        &zed::LanguageServerInstallationStatus::CheckingForUpdate,
+    );
 
-        // The npm package provides a CLI that can be run via node
-        // The entry point is typically in node_modules/<package>/dist/cli.js
-        Ok(zed::Command {
-            command: node_path,
-            args: vec![
-                zed::npm_package_path(package_name)?,
-                "--stdio".to_string(),
-            ],
-            env: Default::default(),
-        })
+    let version = zed::npm_package_latest_version(config.package_name)?;
+
+    if !*did_find_server
+        || zed::npm_package_installed_version(config.package_name)?.as_ref() != Some(&version)
+    {
+        zed::set_language_server_installation_status(
+            language_server_id,
+            &zed::LanguageServerInstallationStatus::Downloading,
+        );
+
+        zed::npm_install_package(config.package_name, &version)?;
+
+        *did_find_server = true;
     }
+
+    Ok(server_path.to_string())
 }
 
 impl zed::Extension for RdfExtension {
     fn new() -> Self {
         Self {
-            cached_sparql_server_path: None,
-            cached_turtle_server_path: None,
-            cached_trig_server_path: None,
+            did_find_sparql_server: false,
+            did_find_turtle_server: false,
+            did_find_trig_server: false,
         }
     }
 
@@ -102,24 +84,30 @@ impl zed::Extension for RdfExtension {
         language_server_id: &zed::LanguageServerId,
         _worktree: &zed::Worktree,
     ) -> Result<zed::Command> {
-        match language_server_id.as_ref() {
-            SPARQL_SERVER_ID => self.npm_server_command(
+        let server_path = match language_server_id.as_ref() {
+            SPARQL_SERVER_ID => language_server_binary_path(
+                &SPARQL_CONFIG,
                 language_server_id,
-                SPARQL_NPM_PACKAGE,
-                &mut self.cached_sparql_server_path,
-            ),
-            TURTLE_SERVER_ID => self.npm_server_command(
+                &mut self.did_find_sparql_server,
+            )?,
+            TURTLE_SERVER_ID => language_server_binary_path(
+                &TURTLE_CONFIG,
                 language_server_id,
-                TURTLE_NPM_PACKAGE,
-                &mut self.cached_turtle_server_path,
-            ),
-            TRIG_SERVER_ID => self.npm_server_command(
+                &mut self.did_find_turtle_server,
+            )?,
+            TRIG_SERVER_ID => language_server_binary_path(
+                &TRIG_CONFIG,
                 language_server_id,
-                TRIG_NPM_PACKAGE,
-                &mut self.cached_trig_server_path,
-            ),
-            _ => Err(format!("Unknown language server: {}", language_server_id)),
-        }
+                &mut self.did_find_trig_server,
+            )?,
+            _ => return Err(format!("Unknown language server: {}", language_server_id)),
+        };
+
+        Ok(zed::Command {
+            command: zed::node_binary_path()?,
+            args: vec![server_path, "--stdio".to_string()],
+            env: Default::default(),
+        })
     }
 
     fn language_server_workspace_configuration(
@@ -127,8 +115,6 @@ impl zed::Extension for RdfExtension {
         _language_server_id: &zed::LanguageServerId,
         _worktree: &zed::Worktree,
     ) -> Result<Option<serde_json::Value>> {
-        // The Stardog language servers don't require special workspace configuration
-        // but this can be extended to support custom settings
         Ok(None)
     }
 }
