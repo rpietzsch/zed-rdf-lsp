@@ -4,6 +4,7 @@ Cargo.lock
 
 # Zed extension artifacts
 /grammars/
+extension.wasm
 
 # OS files
 .DS_Store
