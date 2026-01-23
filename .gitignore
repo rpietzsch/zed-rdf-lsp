@@ -5,6 +5,8 @@ Cargo.lock
 # Zed extension artifacts
 /grammars/
 extension.wasm
+/dist/
+rdf-extension-*.tar.gz
 
 # OS files
 .DS_Store

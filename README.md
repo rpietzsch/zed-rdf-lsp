@@ -23,14 +23,14 @@ RDF (Resource Description Framework) languages.
 
 ## Installation
 
-### From Zed Extension Gallery
+### From Zed Extension Gallery (Recommended)
 
 1. Open Zed
 2. Open the Extensions panel (`Cmd+Shift+X` on macOS)
 3. Search for "RDF"
 4. Click Install
 
-### Manual Installation (Development)
+### Development Installation (Requires Rust)
 
 1. Clone this repository
 2. Build the extension: `task build`
@@ -44,12 +44,34 @@ RDF (Resource Description Framework) languages.
 
 - [Rust](https://rustup.rs/) (via rustup, not homebrew)
 - [Task](https://taskfile.dev) runner
+- **Windows only**: [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022)
+  with "Desktop development with C++" workload (provides the MSVC linker)
+
+**macOS/Linux:**
 
 ```bash
 # Install Task
-brew install go-task
+brew install go-task  # macOS
+# or: sudo snap install task --classic  # Linux
 
 # Setup Rust and WASM target
+task setup
+```
+
+**Windows (PowerShell as Administrator):**
+
+```powershell
+# Install VS Build Tools with C++ workload (required for Rust linker)
+winget install Microsoft.VisualStudio.2022.BuildTools `
+  --override "--add Microsoft.VisualStudio.Workload.VCTools --passive"
+
+# Install Rust
+winget install Rustlang.Rustup
+
+# Install Task
+winget install Task.Task
+
+# Setup WASM target (run in new terminal after rustup install)
 task setup
 ```
 
@@ -142,8 +164,6 @@ repository.
    git commit -am "Add RDF extension"
    # Open PR to zed-industries/extensions
    ```
-
-Run `task publish:instructions` for detailed steps.
 
 ## Project Structure
 

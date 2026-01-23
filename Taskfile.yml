@@ -242,8 +242,9 @@ tasks:
         current=$(grep '^version' extension.toml | sed 's/.*"\(.*\)"/\1/')
         IFS='.' read -r major minor patch <<< "$current"
         new="$major.$minor.$((patch + 1))"
-        sed -i '' "s/version = \"$current\"/version = \"$new\"/" extension.toml
-        sed -i '' "s/version = \"$current\"/version = \"$new\"/" Cargo.toml
+        sed -i.bak "s/version = \"$current\"/version = \"$new\"/" extension.toml
+        sed -i.bak "s/version = \"$current\"/version = \"$new\"/" Cargo.toml
+        rm -f extension.toml.bak Cargo.toml.bak
         echo "Version bumped: $current -> $new"
 
   publish:bump-minor:
@@ -253,52 +254,22 @@ tasks:
         current=$(grep '^version' extension.toml | sed 's/.*"\(.*\)"/\1/')
         IFS='.' read -r major minor patch <<< "$current"
         new="$major.$((minor + 1)).0"
-        sed -i '' "s/version = \"$current\"/version = \"$new\"/" extension.toml
-        sed -i '' "s/version = \"$current\"/version = \"$new\"/" Cargo.toml
+        sed -i.bak "s/version = \"$current\"/version = \"$new\"/" extension.toml
+        sed -i.bak "s/version = \"$current\"/version = \"$new\"/" Cargo.toml
+        rm -f extension.toml.bak Cargo.toml.bak
         echo "Version bumped: $current -> $new"
 
-  publish:instructions:
-    desc: Show publishing instructions
+  publish:bump-major:
+    desc: Bump major version (0.1.0 -> 1.0.0)
     cmds:
       - |
-        echo "=========================================="
-        echo "Publishing to Zed Extensions Registry"
-        echo "=========================================="
-        echo ""
-        echo "1. Build and validate:"
-        echo "   task build"
-        echo "   task publish:check"
-        echo ""
-        echo "2. Push your extension to GitHub:"
-        echo "   git add ."
-        echo "   git commit -m 'Initial release'"
-        echo "   git push origin main"
-        echo ""
-        echo "3. Fork the Zed extensions repository:"
-        echo "   https://github.com/zed-industries/extensions"
-        echo ""
-        echo "4. Clone your fork:"
-        echo "   git clone https://github.com/YOUR_USERNAME/extensions"
-        echo "   cd extensions"
-        echo ""
-        echo "5. Add your extension as a submodule:"
-        echo "   git submodule add https://github.com/rpietzsch/zed-rdf-lsp extensions/rdf"
-        echo ""
-        echo "6. Add entry to extensions.toml:"
-        echo '   [rdf]'
-        echo '   submodule = "extensions/rdf"'
-        echo '   version = "0.1.0"'
-        echo ""
-        echo "7. Sort and format:"
-        echo "   pnpm install"
-        echo "   pnpm sort-extensions"
-        echo ""
-        echo "8. Commit and create PR:"
-        echo "   git add ."
-        echo "   git commit -m 'Add RDF extension'"
-        echo "   git push origin main"
-        echo "   # Open PR at https://github.com/zed-industries/extensions"
-        echo ""
+        current=$(grep '^version' extension.toml | sed 's/.*"\(.*\)"/\1/')
+        IFS='.' read -r major minor patch <<< "$current"
+        new="$((major + 1)).0.0"
+        sed -i.bak "s/version = \"$current\"/version = \"$new\"/" extension.toml
+        sed -i.bak "s/version = \"$current\"/version = \"$new\"/" Cargo.toml
+        rm -f extension.toml.bak Cargo.toml.bak
+        echo "Version bumped: $current -> $new"
 
   # ============================================================================
   # Utility
