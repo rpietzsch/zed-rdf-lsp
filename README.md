@@ -23,14 +23,71 @@ RDF (Resource Description Framework) languages.
 
 ## Installation
 
-### From Zed Extension Gallery
+### From Zed Extension Gallery (Recommended)
 
 1. Open Zed
 2. Open the Extensions panel (`Cmd+Shift+X` on macOS)
 3. Search for "RDF"
 4. Click Install
 
-### Manual Installation (Development)
+### Manual Installation (Prebuilt - No Rust Required)
+
+For users without a Rust toolchain:
+
+1. Download the latest release from
+   [GitHub Releases](https://github.com/rpietzsch/zed-rdf-lsp/releases)
+
+2. Extract and install:
+
+   **macOS/Linux (bash):**
+
+   ```bash
+   # Extract
+   mkdir -p /tmp/rdf-ext && tar -xzf rdf-extension-v*.tar.gz -C /tmp/rdf-ext
+
+   # Install (macOS)
+   mkdir -p ~/Library/Application\ Support/Zed/extensions/installed/rdf
+   cp -r /tmp/rdf-ext/* ~/Library/Application\ Support/Zed/extensions/installed/rdf/
+
+   # Install (Linux)
+   mkdir -p ~/.local/share/zed/extensions/installed/rdf
+   cp -r /tmp/rdf-ext/* ~/.local/share/zed/extensions/installed/rdf/
+   ```
+
+   **Windows (PowerShell):**
+
+   ```powershell
+   # Extract (using built-in tar or extract manually)
+   mkdir $env:TEMP\rdf-ext
+   tar -xzf rdf-extension-v*.tar.gz -C $env:TEMP\rdf-ext
+
+   # Install
+   $ExtDir = "$env:APPDATA\Zed\extensions\installed\rdf"
+   New-Item -ItemType Directory -Force -Path $ExtDir
+   Copy-Item $env:TEMP\rdf-ext\* -Destination $ExtDir -Recurse -Force
+   ```
+
+   Or use the install script:
+
+   ```powershell
+   git clone https://github.com/rpietzsch/zed-rdf-lsp
+   cd zed-rdf-lsp
+   # Extract release to dist/ folder first, then:
+   .\scripts\install.ps1
+   ```
+
+3. Restart Zed
+
+**Using Taskfile** (macOS/Linux/Windows with Git Bash):
+
+```bash
+git clone https://github.com/rpietzsch/zed-rdf-lsp
+cd zed-rdf-lsp
+# Download and extract release to dist/ first, then:
+task install:prebuilt
+```
+
+### Manual Installation (Development - Requires Rust)
 
 1. Clone this repository
 2. Build the extension: `task build`

@@ -301,6 +301,206 @@ tasks:
         echo ""
 
   # ============================================================================
+  # Manual Installation (no Rust toolchain required)
+  # ============================================================================
+
+  install:prebuilt:
+    desc: Install prebuilt extension (no Rust needed) - downloads from GitHub release
+    cmds:
+      - |
+        set -e
+        echo "Installing RDF extension for Zed..."
+
+        # Detect OS and set extension directory
+        case "$(uname -s)" in
+          Darwin)
+            EXT_DIR="$HOME/Library/Application Support/Zed/extensions/installed/rdf"
+            ;;
+          Linux)
+            EXT_DIR="$HOME/.local/share/zed/extensions/installed/rdf"
+            ;;
+          MINGW*|MSYS*|CYGWIN*)
+            EXT_DIR="$APPDATA/Zed/extensions/installed/rdf"
+            ;;
+          *)
+            echo "ERROR: Unsupported operating system"
+            exit 1
+            ;;
+        esac
+
+        echo "Extension directory: $EXT_DIR"
+
+        # Create directory
+        mkdir -p "$EXT_DIR"
+
+        # Check if prebuilt files exist in repo
+        if [ ! -f "{{.EXTENSION_DIR}}/dist/extension.wasm" ]; then
+          echo "ERROR: Prebuilt files not found in dist/"
+          echo "Either:"
+          echo "  1. Download a release from GitHub: https://github.com/rpietzsch/zed-rdf-lsp/releases"
+          echo "  2. Build from source: task build && task release:bundle"
+          exit 1
+        fi
+
+        # Copy files
+        echo "Copying extension files..."
+        cp "{{.EXTENSION_DIR}}/dist/extension.wasm" "$EXT_DIR/"
+        cp "{{.EXTENSION_DIR}}/extension.toml" "$EXT_DIR/"
+        cp -r "{{.EXTENSION_DIR}}/languages" "$EXT_DIR/"
+
+        # Copy grammars if present
+        if [ -d "{{.EXTENSION_DIR}}/dist/grammars" ]; then
+          cp -r "{{.EXTENSION_DIR}}/dist/grammars" "$EXT_DIR/"
+        fi
+
+        echo ""
+        echo "✓ Extension installed successfully!"
+        echo ""
+        echo "Restart Zed to activate the extension."
+        echo "The extension will be available for .rq, .sparql, .ttl, and .trig files."
+
+  install:local:
+    desc: Install from local build (requires prior 'task build')
+    cmds:
+      - |
+        set -e
+        echo "Installing RDF extension from local build..."
+
+        # Detect OS and set extension directory
+        case "$(uname -s)" in
+          Darwin)
+            EXT_DIR="$HOME/Library/Application Support/Zed/extensions/installed/rdf"
+            ;;
+          Linux)
+            EXT_DIR="$HOME/.local/share/zed/extensions/installed/rdf"
+            ;;
+          MINGW*|MSYS*|CYGWIN*)
+            EXT_DIR="$APPDATA/Zed/extensions/installed/rdf"
+            ;;
+          *)
+            echo "ERROR: Unsupported operating system"
+            exit 1
+            ;;
+        esac
+
+        # Check if built
+        WASM_FILE="{{.EXTENSION_DIR}}/target/{{.WASM_TARGET}}/release/zed_rdf.wasm"
+        if [ ! -f "$WASM_FILE" ]; then
+          echo "ERROR: Extension not built. Run 'task build' first."
+          exit 1
+        fi
+
+        echo "Extension directory: $EXT_DIR"
+        mkdir -p "$EXT_DIR"
+        mkdir -p "$EXT_DIR/grammars"
+
+        # Copy files
+        echo "Copying extension files..."
+        cp "$WASM_FILE" "$EXT_DIR/extension.wasm"
+        cp "{{.EXTENSION_DIR}}/extension.toml" "$EXT_DIR/"
+        cp -r "{{.EXTENSION_DIR}}/languages" "$EXT_DIR/"
+
+        # Copy grammars if they exist (from previous dev install)
+        if [ -f "{{.EXTENSION_DIR}}/grammars/sparql.wasm" ]; then
+          cp "{{.EXTENSION_DIR}}/grammars/"*.wasm "$EXT_DIR/grammars/"
+        fi
+
+        echo ""
+        echo "✓ Extension installed from local build!"
+        echo ""
+        echo "Restart Zed to activate the extension."
+
+  install:uninstall:
+    desc: Uninstall the extension
+    cmds:
+      - |
+        echo "Uninstalling RDF extension..."
+
+        case "$(uname -s)" in
+          Darwin)
+            EXT_DIR="$HOME/Library/Application Support/Zed/extensions/installed/rdf"
+            ;;
+          Linux)
+            EXT_DIR="$HOME/.local/share/zed/extensions/installed/rdf"
+            ;;
+          MINGW*|MSYS*|CYGWIN*)
+            EXT_DIR="$APPDATA/Zed/extensions/installed/rdf"
+            ;;
+        esac
+
+        if [ -d "$EXT_DIR" ]; then
+          rm -rf "$EXT_DIR"
+          echo "✓ Extension uninstalled from: $EXT_DIR"
+        else
+          echo "Extension not found at: $EXT_DIR"
+        fi
+
+  install:windows:
+    desc: Install on Windows (runs PowerShell script)
+    cmds:
+      - |
+        echo "Running PowerShell install script..."
+        echo ""
+        echo "If this fails, run directly in PowerShell:"
+        echo "  .\\scripts\\install.ps1"
+        echo ""
+        powershell -ExecutionPolicy Bypass -File scripts/install.ps1
+
+  install:windows-uninstall:
+    desc: Uninstall on Windows (runs PowerShell script)
+    cmds:
+      - powershell -ExecutionPolicy Bypass -File scripts/install.ps1 -Uninstall
+
+  release:bundle:
+    desc: Create a release bundle with precompiled artifacts
+    deps: [build]
+    cmds:
+      - |
+        set -e
+        echo "Creating release bundle..."
+
+        # Create dist directory
+        mkdir -p "{{.EXTENSION_DIR}}/dist"
+        mkdir -p "{{.EXTENSION_DIR}}/dist/grammars"
+        mkdir -p "{{.EXTENSION_DIR}}/dist/languages"
+
+        # Copy extension WASM
+        cp "{{.EXTENSION_DIR}}/target/{{.WASM_TARGET}}/release/zed_rdf.wasm" \
+           "{{.EXTENSION_DIR}}/dist/extension.wasm"
+
+        # Copy grammar WASMs if they exist
+        if [ -f "{{.EXTENSION_DIR}}/grammars/sparql.wasm" ]; then
+          cp "{{.EXTENSION_DIR}}/grammars/"*.wasm "{{.EXTENSION_DIR}}/dist/grammars/"
+        else
+          echo "Note: Grammar WASMs not found. Users will need Zed to compile them."
+          echo "      (Run 'zed: install dev extension' once to generate them)"
+        fi
+
+        # Copy language configs
+        cp -r "{{.EXTENSION_DIR}}/languages/"* "{{.EXTENSION_DIR}}/dist/languages/"
+
+        # Copy metadata
+        cp "{{.EXTENSION_DIR}}/extension.toml" "{{.EXTENSION_DIR}}/dist/"
+        cp "{{.EXTENSION_DIR}}/LICENSE" "{{.EXTENSION_DIR}}/dist/"
+        cp "{{.EXTENSION_DIR}}/README.md" "{{.EXTENSION_DIR}}/dist/"
+
+        # Create archive
+        VERSION=$(grep '^version' extension.toml | sed 's/.*"\(.*\)"/\1/')
+        ARCHIVE="rdf-extension-v${VERSION}.tar.gz"
+
+        cd "{{.EXTENSION_DIR}}/dist"
+        tar -czvf "../$ARCHIVE" .
+        cd "{{.EXTENSION_DIR}}"
+
+        echo ""
+        echo "✓ Release bundle created: $ARCHIVE"
+        echo ""
+        echo "Contents:"
+        tar -tzvf "$ARCHIVE"
+        echo ""
+        echo "Upload this to GitHub Releases for users without Rust toolchain."
+
+  # ============================================================================
   # Utility
   # ============================================================================
 
@@ -308,7 +508,9 @@ tasks:
     desc: Clean all build artifacts and temporary files
     cmds:
       - cargo clean
+      - rm -rf dist/
       - rm -f /tmp/test.rq /tmp/test.ttl /tmp/test.trig
+      - rm -f rdf-extension-*.tar.gz
 
   info:
     desc: Show extension information
