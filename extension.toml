@@ -1,6 +1,6 @@
 id = "rdf"
 name = "RDF"
-version = "0.1.0"
+version = "0.1.1"
 schema_version = 1
 authors = ["Rene Pietzsch <rpietzsch@github.com>"]
 description = "Language support for RDF: SPARQL, Turtle, and TriG with syntax highlighting and LSP"

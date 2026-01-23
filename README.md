@@ -143,8 +143,6 @@ repository.
    # Open PR to zed-industries/extensions
    ```
 
-Run `task publish:instructions` for detailed steps.
-
 ## Project Structure
 
 ```text
