@@ -5,16 +5,16 @@ RDF (Resource Description Framework) languages.
 
 ## Supported Languages
 
-| Language | File Extensions | Description |
-|----------|----------------|-------------|
+| Language   | File Extensions  | Description                            |
+| ---------- | ---------------- | -------------------------------------- |
 | **SPARQL** | `.rq`, `.sparql` | SPARQL Protocol and RDF Query Language |
-| **Turtle** | `.ttl` | Terse RDF Triple Language |
-| **TriG** | `.trig` | Turtle with Named Graphs |
+| **Turtle** | `.ttl`           | Terse RDF Triple Language              |
+| **TriG**   | `.trig`          | Turtle with Named Graphs               |
 
 ## Features
 
 - **Syntax highlighting** for all supported languages
-- **Language Server Protocol (LSP)** support via Stardog language servers:
+- **Language Server Protocol (LSP)** support via language servers:
   - Autocompletion for keywords and syntax
   - Hover tooltips
   - Diagnostics (error checking)
@@ -169,13 +169,13 @@ zed-rdf-lsp/
 
 ## Language Servers
 
-This extension uses the [Stardog language servers](https://github.com/stardog-union/stardog-language-servers):
+This extension uses the language servers:
 
-| Language | npm Package |
-|----------|-------------|
-| SPARQL | [sparql-language-server](https://www.npmjs.com/package/sparql-language-server) |
-| Turtle | [turtle-language-server](https://www.npmjs.com/package/turtle-language-server) |
-| TriG | [trig-language-server](https://www.npmjs.com/package/trig-language-server) |
+| Language | npm Package                                                                    |
+| -------- | ------------------------------------------------------------------------------ |
+| SPARQL   | [sparql-language-server](https://www.npmjs.com/package/sparql-language-server) |
+| Turtle   | [turtle-language-server](https://www.npmjs.com/package/turtle-language-server) |
+| TriG     | [trig-language-server](https://www.npmjs.com/package/trig-language-server)     |
 
 The extension automatically downloads and manages these servers.
 
